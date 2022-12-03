@@ -26,6 +26,9 @@ class CircularCountDownTimer extends StatefulWidget {
   /// Background Gradient for Countdown Widget.
   final Gradient? backgroundGradient;
 
+  final int Function()? getDuration;
+  final int Function()? getInitialDuration;
+
   /// This Callback will execute when the Countdown Ends.
   final VoidCallback? onComplete;
 
@@ -101,6 +104,8 @@ class CircularCountDownTimer extends StatefulWidget {
     this.initialDuration = 0,
     this.isReverse = false,
     this.isReverseAnimation = false,
+    this.getDuration,
+    this.getInitialDuration,
     this.onComplete,
     this.onStart,
     this.onChange,
@@ -124,6 +129,8 @@ class CircularCountDownTimerState extends State<CircularCountDownTimer>
   AnimationController? _controller;
   Animation<double>? _countDownAnimation;
   CountDownController? countDownController;
+  late int _widgetDuration;
+  late int _widgetInitialDuration;
 
   String get time {
     String timeStamp = "";
@@ -132,9 +139,9 @@ class CircularCountDownTimerState extends State<CircularCountDownTimer>
         !countDownController!.isStarted) {
       if (widget.timeFormatterFunction != null) {
         return Function.apply(widget.timeFormatterFunction!,
-            [_getTime, Duration(seconds: widget.duration)]).toString();
+            [_getTime, Duration(seconds: _widgetDuration)]).toString();
       } else {
-        timeStamp = _getTime(Duration(seconds: widget.duration));
+        timeStamp = _getTime(Duration(seconds: _widgetDuration));
       }
     } else {
       Duration? duration = _controller!.duration! * _controller!.value;
@@ -179,15 +186,15 @@ class CircularCountDownTimerState extends State<CircularCountDownTimer>
   void _setController() {
     countDownController?._state = this;
     countDownController?._isReverse = widget.isReverse;
-    countDownController?._initialDuration = widget.initialDuration;
-    countDownController?._duration = widget.duration;
+    countDownController?._initialDuration = _widgetInitialDuration;
+    countDownController?._duration = _widgetDuration;
     countDownController?.isStarted = widget.autoStart;
 
-    if (widget.initialDuration > 0 && widget.autoStart) {
+    if (_widgetInitialDuration > 0 && widget.autoStart) {
       if (widget.isReverse) {
-        _controller?.value = 1 - (widget.initialDuration / widget.duration);
+        _controller?.value = 1 - (_widgetInitialDuration / _widgetDuration);
       } else {
-        _controller?.value = (widget.initialDuration / widget.duration);
+        _controller?.value = (_widgetInitialDuration / _widgetDuration);
       }
 
       countDownController?.start();
@@ -226,6 +233,22 @@ class CircularCountDownTimerState extends State<CircularCountDownTimer>
     }
   }
 
+  int _getDuration() {
+    if (widget.getDuration != null) {
+      return widget.getDuration!();
+    } else {
+      return widget.duration;
+    }
+  }
+
+  int _getInitialDuration() {
+    if (widget.getInitialDuration != null) {
+      return widget.getInitialDuration!();
+    } else {
+      return widget.initialDuration;
+    }
+  }
+
   void _onStart() {
     if (widget.onStart != null) widget.onStart!();
   }
@@ -236,11 +259,14 @@ class CircularCountDownTimerState extends State<CircularCountDownTimer>
 
   @override
   void initState() {
+    _widgetDuration = _getDuration();
+    _widgetInitialDuration = _getInitialDuration();
+
     countDownController = widget.controller ?? CountDownController();
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(seconds: widget.duration),
+      duration: Duration(seconds: _widgetDuration),
     );
 
     _controller!.addStatusListener((status) {
